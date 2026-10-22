@@ -52,7 +52,7 @@ async def run_turn(level: LevelConfig, history: list[ChatTurn]) -> TurnResult:
     messages = [ChatTurn(role="system", content=system_prompt), *history]
 
     try:
-        result = await complete(load_role("DEFENDER"), messages, level.defender_temperature)
+        result = await complete(load_role("DEFENDER", level.id), messages, level.defender_temperature)
     except Exception as exc:  # noqa: BLE001 - any failure must fail closed
         trace.layers.append(
             LayerResult(layer="guard", verdict="block", reason=f"guard failed: {type(exc).__name__}")

@@ -83,3 +83,13 @@ def test_guard_failure_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.trace.layers[0].verdict == "block"
     # The refusal shown to the player must not hint at the cause.
     assert "TimeoutError" not in result.reply
+
+
+def test_level_model_override_wins_over_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DEFENDER_MODEL_LEVEL_<n> replaces the default model for that level only."""
+    from api.llm.roles import load_role
+
+    monkeypatch.setenv("DEFENDER_MODEL_LEVEL_1", "weak-model")
+    assert load_role("DEFENDER", 1).model == "weak-model"
+    assert load_role("DEFENDER", 2).model == "test-model"
+    assert load_role("DEFENDER").model == "test-model"

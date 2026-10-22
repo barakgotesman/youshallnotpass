@@ -30,11 +30,15 @@ class RoleConfig(BaseModel):
     api_key: str
 
 
-def load_role(role: Role) -> RoleConfig:
+def load_role(role: Role, level_id: int | None = None) -> RoleConfig:
     """Builds a role's config from ``{ROLE}_PROVIDER/_MODEL/_BASE_URL/_API_KEY``.
 
     Args:
         role: Which role to load.
+        level_id: If given and ``{ROLE}_MODEL_LEVEL_<n>`` is set, that model
+            replaces ``{ROLE}_MODEL`` for this level. Model strength is the
+            main difficulty dial: an early level can use a weak, easily
+            tricked model while later levels use a stronger one.
 
     Returns:
         The validated configuration for that role.
@@ -51,4 +55,6 @@ def load_role(role: Role) -> RoleConfig:
         if not value:
             raise RuntimeError(f"{name} is not set; see .env.example")
         values[field] = value
+    if level_id is not None:
+        values["model"] = os.environ.get(f"{role}_MODEL_LEVEL_{level_id}") or values["model"]
     return RoleConfig(**values)
