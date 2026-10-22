@@ -1,0 +1,4 @@
+# Runtime dependencies only: Vercel installs exactly this file for the API.
+fastapi>=0.115
+pydantic>=2.9
+asyncpg>=0.30
