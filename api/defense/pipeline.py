@@ -13,6 +13,10 @@ from api.llm.roles import load_role
 from api.prompts import load_prompt
 from api.secrets import get_secret
 
+# The guard's character is one fixed file for every level. Changing it means
+# a new persona version and a changelog entry, never a per-level setting.
+PERSONA_VERSION = "v1"
+
 # What the player sees when a guard layer fails. In-world on purpose: a raw
 # error would reveal our infrastructure, and it must read the same whatever
 # the cause.
@@ -48,7 +52,11 @@ async def run_turn(level: LevelConfig, history: list[ChatTurn]) -> TurnResult:
         The reply to show, whether it was blocked, and the trace.
     """
     trace = PipelineTrace()
-    system_prompt = load_prompt("defender", level.defender_prompt, secret=get_secret(level.id))
+    # Character first, then this level's security rules: the persona is the
+    # same for the whole game, so only the rules part differs per level.
+    persona = load_prompt("persona", PERSONA_VERSION)
+    rules = load_prompt("defender", level.defender_prompt, secret=get_secret(level.id))
+    system_prompt = f"{persona}\n{rules}"
     messages = [ChatTurn(role="system", content=system_prompt), *history]
 
     try:

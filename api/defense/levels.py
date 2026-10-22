@@ -13,7 +13,8 @@ class LevelConfig(BaseModel):
     Attributes:
         id: Level number, 1-based.
         name: Display name.
-        defender_prompt: Version of ``prompts/defender/`` to use.
+        defender_prompt: Version of ``prompts/defender/`` to use (the
+            level's security rules).
         defender_temperature: Sampling temperature for the guard. Higher means
             more varied (and more easily tricked) replies.
     """
