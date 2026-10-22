@@ -9,3 +9,4 @@ web/dist/
 evals/reports/*.json
 
 .vercel
+design/source/

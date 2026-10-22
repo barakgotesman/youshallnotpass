@@ -1,1 +1,147 @@
 @import "tailwindcss";
+@import "@fontsource/almendra/400.css";
+@import "@fontsource/almendra/700.css";
+@import "@fontsource/alegreya-sans/400.css";
+@import "@fontsource/alegreya-sans/400-italic.css";
+@import "@fontsource/alegreya-sans/500.css";
+@import "@fontsource/alegreya-sans/700.css";
+
+/*
+ * Design tokens. Every colour is sampled from the background illustration:
+ * the night-blue ground, the ember glow of the tower, the lantern's gold.
+ * Text greys are tinted toward the ground's blue, never neutral grey.
+ */
+@theme {
+  --color-night: #070b17;
+  --color-panel: #0d1424;
+  --color-panel-raised: #141d33;
+  --color-line: #28345a;
+  --color-ink: #ece8dd;
+  --color-ink-muted: #a3acc2;
+  --color-ember: #ff7a3d;
+  --color-ember-deep: #3b1d18;
+  --color-danger: #ff8a7a;
+  --color-lantern: #ffc05a;
+
+  --font-display: "Almendra", serif;
+  --font-body: "Alegreya Sans", system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-night);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  /* Alegreya Sans runs small for its size; 18px keeps chat comfortable. */
+  font-size: 18px;
+  color-scheme: dark;
+}
+
+/* Browser surfaces themed from the palette instead of left at defaults. */
+::selection {
+  background: var(--color-lantern);
+  color: var(--color-night);
+}
+
+input,
+textarea {
+  caret-color: var(--color-lantern);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-lantern);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+/*
+ * Lantern glow: the signature move. It sits where the lantern is in the
+ * illustration. The image is drawn "cover" and anchored bottom-left, so its
+ * rendered width is the larger of the viewport width and height x aspect
+ * ratio (1672 / 940). The lantern is at about 6% across and 21% up the image.
+ */
+.lantern-glow {
+  --image-width: max(100vw, calc(100dvh * 1.7787));
+  position: absolute;
+  left: calc(var(--image-width) * 0.06);
+  bottom: calc(var(--image-width) / 1.7787 * 0.21);
+  width: calc(var(--image-width) * 0.22);
+  aspect-ratio: 1;
+  translate: -50% 50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 192 90 / 0.55) 0%, rgb(255 140 60 / 0.18) 40%, transparent 70%);
+  opacity: 0.4;
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), scale 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.lantern-glow[data-state="thinking"] {
+  animation: lantern-pulse 1.8s ease-in-out infinite;
+}
+
+/* The gate opening: the glow floods the scene. */
+.lantern-glow[data-state="open"] {
+  opacity: 1;
+  scale: 4;
+}
+
+@keyframes lantern-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/* A blocked message makes the guard thump his staff: one quick shake. */
+@keyframes staff-thump {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+.staff-thump {
+  animation: staff-thump 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* New messages rise in from slightly below. Content is visible by default. */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.message-in {
+  animation: message-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lantern-glow[data-state="thinking"],
+  .staff-thump,
+  .message-in {
+    animation: none;
+  }
+
+  .lantern-glow {
+    transition: none;
+  }
+}
