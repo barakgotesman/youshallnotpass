@@ -22,7 +22,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def secret_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Gives every test a known level-1 secret and role config."""
-    monkeypatch.setenv("LEVEL_1_SECRET", "LANTERN")
+    monkeypatch.setenv("LEVEL_1_SECRET", "TESTWORD")
     for field, value in {
         "PROVIDER": "test",
         "MODEL": "test-model",
@@ -34,12 +34,12 @@ def secret_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_guess_ignores_case_and_spaces() -> None:
     """A correct guess counts however the player capitalizes or pads it."""
-    assert is_correct_guess(1, "  lantern ")
+    assert is_correct_guess(1, "  testword ")
 
 
 def test_wrong_guess_is_rejected() -> None:
     """A near miss must not pass."""
-    assert not is_correct_guess(1, "lanterns")
+    assert not is_correct_guess(1, "testwords")
 
 
 def test_guess_route_never_returns_the_secret() -> None:

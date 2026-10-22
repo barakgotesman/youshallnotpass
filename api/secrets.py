@@ -30,7 +30,7 @@ def get_secret(level_id: int) -> str:
 def is_correct_guess(level_id: int, guess: str) -> bool:
     """Checks a player's password guess.
 
-    Comparison ignores case and surrounding spaces so "lantern " counts, and
+    Comparison ignores case and surrounding spaces so "secret " counts, and
     uses a constant-time compare so response timing cannot leak how many
     leading characters were right.
 
