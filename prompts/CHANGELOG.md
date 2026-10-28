@@ -13,6 +13,8 @@ character cannot drift between levels and a defense change never touches his voi
   stays in character on any topic, one to three dry funny sentences, no emojis.
 - **Why:** with only "gruff gate guard" in the prompt, the Level 1 model broke character and answered
   like a chatbot ("As a simple AI assistant..."). Reported by the project owner while playing.
+- **Language rule added:** the Level 1 model (allam-2-7b, built for Arabic) once answered "who u are"
+  in Arabic. The persona now says: reply in the visitor's language, English when unclear or short.
 - **Eval delta:** none yet (harness arrives in Phase 4).
 
 ## defender/v1
