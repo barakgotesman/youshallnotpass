@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
-import { postChat, postGuess } from '../../lib/api'
-import { CHAT_FAILED, GUESS_CORRECT, GUESS_FAILED, wrongGuessLine } from './copy'
+import { useCallback, useEffect, useState } from 'react'
+import { ApiError, getProgress, postChat, postGuess } from '../../lib/api'
+import { CHAT_FAILED, GUESS_CORRECT, GUESS_FAILED, slowDownLine, wrongGuessLine } from './copy'
 import { toApiHistory, type ChatEntry } from './messages'
 
 /** Outcome of the player's latest password guess. */
@@ -21,6 +21,8 @@ export type GameState = {
   chatError: string | null
   /** Result of the latest guess. */
   guess: GuessStatus
+  /** True once the server says the shared daily budget is spent; the game shows the closed screen. */
+  vaultClosed: boolean
   /**
    * Sends a player message to the guard.
    * @param text - The message, already trimmed and non-empty.
@@ -52,12 +54,40 @@ export function useGame(level: number): GameState {
   const [chatError, setChatError] = useState<string | null>(null)
   const [guess, setGuess] = useState<GuessStatus>({ kind: 'idle' })
   const [wrongCount, setWrongCount] = useState(0)
+  const [vaultClosed, setVaultClosed] = useState(false)
+
+  // A returning player who already beat this level sees the cleared state, not a fresh gate.
+  // A failed lookup is ignored: the game is fully playable without it.
+  useEffect(() => {
+    getProgress()
+      .then(({ cleared_levels }) => {
+        if (cleared_levels.includes(level)) setGuess({ kind: 'correct', message: GUESS_CORRECT })
+      })
+      .catch(() => undefined)
+  }, [level])
+
+  /**
+   * Turns a failed request into the right in-world reaction.
+   *
+   * @param error - What the API call threw.
+   * @param fallback - Message for failures that are not rate limits.
+   * @returns The line to show the player, or null if the vault-closed screen takes over.
+   */
+  const explainFailure = useCallback((error: unknown, fallback: string): string | null => {
+    if (error instanceof ApiError && error.limit === 'vault_closed') {
+      setVaultClosed(true)
+      return null
+    }
+    if (error instanceof ApiError && error.limit === 'slow_down') return slowDownLine(error.retryAfter)
+    return fallback
+  }, [])
 
   const sendMessage = useCallback(
     async (text: string): Promise<boolean> => {
       if (guardIsReplying) return false
       setChatError(null)
-      const userEntry: ChatEntry = { id: Date.now(), role: 'user', content: text, excluded: false }
+      const now = Date.now()
+      const userEntry: ChatEntry = { id: now, role: 'user', sentAt: now, content: text, excluded: false }
       setEntries((current) => [...current, userEntry])
       setGuardIsReplying(true)
       try {
@@ -66,19 +96,19 @@ export function useGame(level: number): GameState {
         setEntries((current) => [
           // A blocked turn is shown but excluded from future history.
           ...current.map((entry) => (entry.id === userEntry.id ? { ...entry, excluded: blocked } : entry)),
-          { id: userEntry.id + 1, role: 'assistant', content: reply, excluded: blocked },
+          { id: userEntry.id + 1, role: 'assistant', sentAt: Date.now(), content: reply, excluded: blocked },
         ])
         return true
-      } catch {
+      } catch (error) {
         // Take the unanswered message back off the screen so the player can retry it.
         setEntries((current) => current.filter((entry) => entry.id !== userEntry.id))
-        setChatError(CHAT_FAILED)
+        setChatError(explainFailure(error, CHAT_FAILED))
         return false
       } finally {
         setGuardIsReplying(false)
       }
     },
-    [entries, guardIsReplying, level],
+    [entries, explainFailure, guardIsReplying, level],
   )
 
   const submitGuess = useCallback(
@@ -93,12 +123,13 @@ export function useGame(level: number): GameState {
         const attempt = wrongCount + 1
         setWrongCount(attempt)
         setGuess({ kind: 'wrong', message: wrongGuessLine(attempt) })
-      } catch {
-        setGuess({ kind: 'error', message: GUESS_FAILED })
+      } catch (error) {
+        const message = explainFailure(error, GUESS_FAILED)
+        setGuess(message === null ? { kind: 'idle' } : { kind: 'error', message })
       }
     },
-    [level, wrongCount],
+    [explainFailure, level, wrongCount],
   )
 
-  return { entries, guardIsReplying, chatError, guess, sendMessage, submitGuess }
+  return { entries, guardIsReplying, chatError, guess, vaultClosed, sendMessage, submitGuess }
 }

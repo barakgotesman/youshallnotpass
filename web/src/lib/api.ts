@@ -1,5 +1,6 @@
 import type { ApiChatMessage, ChatRequest, ChatResponse } from '../types/chat'
 import type { GuessRequest, GuessResponse } from '../types/guess'
+import type { LimitCode, ProgressResponse } from '../types/progress'
 
 /**
  * Error for any non-2xx answer or network failure from the API.
@@ -10,15 +11,23 @@ import type { GuessRequest, GuessResponse } from '../types/guess'
 export class ApiError extends Error {
   /** HTTP status, or 0 when the request never reached the server. */
   readonly status: number
+  /** Set on a 429: why the request was refused. Null for every other failure. */
+  readonly limit: LimitCode | null
+  /** Set on a 429: seconds until the player may try again. */
+  readonly retryAfter: number
 
   /**
    * @param status - HTTP status, or 0 for a network failure.
    * @param message - Internal description; never shown to the player.
+   * @param limit - Rate-limit code from a 429 body, if any.
+   * @param retryAfter - Seconds to wait, from a 429 body.
    */
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, limit: LimitCode | null = null, retryAfter = 0) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.limit = limit
+    this.retryAfter = retryAfter
   }
 }
 
@@ -44,10 +53,35 @@ async function postJson<Request, Response>(path: string, body: Request): Promise
   } catch {
     throw new ApiError(0, 'Network request failed')
   }
-  if (!response.ok) {
-    throw new ApiError(response.status, `${path} answered ${response.status}`)
+  return readJson<Response>(path, response)
+}
+
+/**
+ * Reads a JSON answer, turning any non-2xx status into an ApiError.
+ *
+ * A 429 body carries `detail.code` and `detail.retry_after`; they are lifted
+ * onto the error so the UI can pick the right designed screen.
+ *
+ * @param path - Path that was requested, for the error message.
+ * @param response - The fetch response.
+ * @returns The parsed body.
+ * @throws ApiError on a non-2xx status.
+ */
+async function readJson<Response>(path: string, response: globalThis.Response): Promise<Response> {
+  if (response.ok) return (await response.json()) as Response
+  let limit: LimitCode | null = null
+  let retryAfter = 0
+  if (response.status === 429) {
+    try {
+      const body = (await response.json()) as { detail?: { code?: LimitCode; retry_after?: number } }
+      limit = body.detail?.code ?? null
+      retryAfter = body.detail?.retry_after ?? 0
+    } catch {
+      // An unreadable 429 body still means "too many requests"; treat it as slow_down.
+      limit = 'slow_down'
+    }
   }
-  return (await response.json()) as Response
+  throw new ApiError(response.status, `${path} answered ${response.status}`, limit, retryAfter)
 }
 
 /**
@@ -74,4 +108,20 @@ export function postChat(level: number, messages: ApiChatMessage[]): Promise<Cha
  */
 export function postGuess(level: number, guess: string): Promise<GuessResponse> {
   return postJson<GuessRequest, GuessResponse>('/api/guess', { level, guess })
+}
+
+/**
+ * Loads which levels this player has already beaten.
+ *
+ * @returns The cleared level ids.
+ * @throws ApiError if the request fails.
+ */
+export async function getProgress(): Promise<ProgressResponse> {
+  let response: globalThis.Response
+  try {
+    response = await fetch('/api/progress')
+  } catch {
+    throw new ApiError(0, 'Network request failed')
+  }
+  return readJson<ProgressResponse>('/api/progress', response)
 }

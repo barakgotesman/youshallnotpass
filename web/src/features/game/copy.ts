@@ -15,6 +15,24 @@ export const GUARD_GREETING =
 /** Shown when a chat request fails (network, server, or anything else). */
 export const CHAT_FAILED = 'A raven carrying your message got lost on the way. Try again.'
 
+/**
+ * Shown when this player sends messages too fast.
+ *
+ * @param seconds - Seconds until they may try again.
+ * @returns A line from the guard.
+ */
+export function slowDownLine(seconds: number): string {
+  const wait = seconds >= 90 ? `${Math.ceil(seconds / 60)} minutes` : `${Math.max(seconds, 1)} seconds`
+  return `The guard raises a hand. "Slow down, friend. Come back in ${wait}."`
+}
+
+/** Headline of the screen shown when the shared daily budget is spent. */
+export const VAULT_CLOSED_TITLE = 'The vault is closed for today'
+
+/** Body of the vault-closed screen. */
+export const VAULT_CLOSED_BODY =
+  'Old Greybeard has gone home to rest his beard. The gate opens again tomorrow, and so does the challenge.'
+
 /** Shown when a guess request fails. */
 export const GUESS_FAILED = 'The gate did not hear you. Try speaking again.'
 
