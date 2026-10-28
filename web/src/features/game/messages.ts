@@ -5,6 +5,8 @@ export type ChatEntry = {
   /** Stable key for rendering. */
   id: number
   role: 'user' | 'assistant'
+  /** Epoch milliseconds when the message appeared, shown as the time under a message group. */
+  sentAt: number
   content: string
   /**
    * True for a refusal the pipeline produced instead of a real guard answer,
